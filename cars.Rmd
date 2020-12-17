@@ -1,30 +1,139 @@
 ---
-title: "cars"
+title: "Final Project Part 2"
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 author: "Mark Kirby"
-date: "17/12/2020"
-output: html_document
+date: "16/12/2020"
+output:
+  bookdown::html_document2:
+    df_print: paged
+    number_sections: false
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(DataExplorer)
 ```
 
-## R Markdown
+# Final Project
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Section 2: R Package
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+In this part of the project I am going to introduce the *DataExplorer* package. This package is uses to speed up exploratory data analysis. For this section I am going to use the parks data from part 1 and a new data set called bcancer which contains various pieces of information on breast cancer patients in Wisconsin. I am using two different datasets to show the features in the *DataExplorer* package. First we load these two datasets.
+```{r readin}
 
-```{r cars}
-summary(cars)
+parks <- read.csv('Parks_and_Recreation.csv', stringsAsFactors = FALSE)
+names(parks)[1] <- "OBJECTID"
+
+data(bcancer, package = "VIM")
+
 ```
 
-## Including Plots
+The code block above reads in the two datasets we need to highlight the functionality of the *DataExplorer*
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r dataset_plot, fig.show='animate', fig.align='center'}
+data_list <- list(bcancer, parks)
+plot_str(data_list)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+The above code section creates a plot which shows which variables are in each dataframe. This plot in animated so doesn't render correctly here. To see the plot please click on the following link to my github account.
+
+The first function I am going to use from the *DataExplorer* is **introduce()**, this function computes various counts of row, columns and missing values
+
+```{r introduce}
+knitr::kable(t(introduce(parks)), col.names = c('Count'))
+```
+
+The **plot_intro()** function allows us to visualize this data with some small calculations
+```{r intro2, fig.align='center', fig.cap="Bar chart of the output from the introduce function."}
+plot_intro(parks)
+```
+
+Figure \@ref(fig:intro2) show the amount of memory the data is taking up, the percentage of discrete vs continuous columns, the percentage of columns that are missing all values, the percentage of complete rows in the data and the percentage of missing observations. This graph is a nice was to examine the potential issue that may be present in the dataset. 
+
+The fact that we have 0% complete rows is quite alarming so naturally we will need to investigate that further. We can do this using the **plot_missing** function.
+```{r missingvals, fig.align='center',fig.height = 7, fig.cap="Bar chart showing percentage of missing values in each column."}
+plot_missing(parks)
+```
+
+From Figure \@ref(fig:missingvals) we can see that there are two columns in that data that are missing in every row. The next logical step is to remove these columns from the data. We can do this several ways in R but DataLoader also has a function for dropping variables
+
+```{r drop_cols}
+# Removing unwanted columns
+parks <- drop_columns(parks, c("SummaryActivities", "SourceFunding"))
+```
+
+*DataExplorer* also have a function that allows us to visualize the distribution for all discrete variables. For the parks data I will just plot a subset as there are too many discrete variables to plot neatly at once.
+
+```{r discretevars, fig.align='center', fig.width = 10,fig.height = 7,  fig.cap="Bar plot of selected discrete varaibles."}
+park_subset <- parks[,c("grouptypename", "Parking",              
+                        "Playground","AdultExerciseEquipment",
+                        "Sports_PlayingPitches", "CycleTrack")]
+names(park_subset)[1] <- "Park_Type"
+plot_bar(park_subset)
+```
+
+We can also colour each plot based on a third variable. In this case I will colour the data based on the park type.
+
+```{r discretevars2, fig.align='center', fig.width = 10,fig.height = 7,  fig.cap="Bar plot of selected discrete varaibles coloured by park type."}
+plot_bar(park_subset, by = "Park_Type")
+```
+
+Figure \@ref(fig:discretevars) & \@ref(fig:discretevars2) are great ways of exploring the distribution of discrete variables and show a lot of information with minimal coding effort. 
+
+The next step is analysing continuous variables using *DataExplorer*. For continuous variables we can plot individual histograms for each variable using the **plot_histogram()** function. For this step, given that the parks data have very few continuous variables, I will use the bcancer data to illustrate the R packages functionality.
+
+```{r continuous, fig.align='center',  fig.cap="Histogram of all continuous variables in the breast cancer data."}
+plot_histogram(bcancer)
+```
+
+Figure \@ref(fig:continuous) show the histogram of each of the individual continuous variables in the data. Once again this is a great way to visualise the distribution of each variable with minimal coding effort.
+
+We can also produce a correlation heatmap for all variables in the data.
+
+```{r corrplot, fig.align='center',  fig.cap="Correlation heatmap of all variables with less than 5 values in the breast cancer data."}
+# Creates a correlation heatmap
+# Drop all columns with more than 10 values
+plot_correlation(na.omit(bcancer), maxcat = 10L)
+```
+
+Correlation is a great way to quickly measure the relationship between variables and is very useful in exploratory data analysis.
+
+Another feature of the *DataExplorer* package is creating high quality boxplots and scatter plots using the **plot_boxplot()** and **plot_scatterplot()** functions.
+
+```{r boxplot, fig.align='center',  fig.cap="Boxplot of selected variables."}
+# Removing a column which has missing values
+bcancer_subset <- drop_columns(bcancer, c("bare_nuclei"))
+
+## Call boxplot function
+plot_boxplot(bcancer_subset, by = "class")
+```
+
+```{r scatplot, fig.align='center',  fig.cap="Scatterplot of selected variables."}
+# Call the scatterplot function
+plot_scatterplot(bcancer_subset, by = "class")
+```
+
+The graphs in Figure \@ref(fig:boxplot) & \@ref(fig:scatplot) show how a simple function can create these high quality ggplot graphs.
+
+*DataExplorer* also allows us to create a Rmarkdown report which contains each feature in the package. You can turn sections on or off using the **configure_report()** function as shown in the section below.
+
+```{r createreport}
+config <- configure_report(
+  add_plot_str = T,
+  add_plot_qq = T,
+  add_plot_prcomp = T,
+  add_plot_boxplot = T,
+  add_plot_scatterplot = T,
+  global_ggtheme = quote(theme_minimal(base_size = 14))
+)
+
+#create_report(bcancer_subset, config = config)
+#create_report(bcancer_subset, y = "class", config = config)
+```
+
+Unfortunately I can't show this markdown document in a PDF so I have stored it on my github page here for you to view:
