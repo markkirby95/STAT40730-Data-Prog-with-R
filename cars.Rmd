@@ -44,7 +44,7 @@ The above code section creates a plot which shows which variables are in each da
 
 The first function I am going to use from the *DataExplorer* is **introduce()**, this function computes various counts of row, columns and missing values
 
-```{r introduce}
+```{r introduce1}
 knitr::kable(t(introduce(parks)), col.names = c('Count'))
 ```
 
